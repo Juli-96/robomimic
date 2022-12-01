@@ -161,8 +161,26 @@ class BC(PolicyAlgo):
         action_losses = [
             self.algo_config.loss.l2_weight * losses["l2_loss"],
             self.algo_config.loss.l1_weight * losses["l1_loss"],
-            self.algo_config.loss.cos_weight * losses["cos_loss"],
+            self.algo_config.loss.cos_weight * losses["cos_loss"]
         ]
+
+        #add extra loss-functions: #########################
+        try:
+            if self.algo_config.loss.gaussNLL_weight>0:
+                if not "gaussNLL_loss" in losses:
+                    self.var=torch.ones(actions.shape[0], 1, requires_grad=True).to(self.device)
+                losses["gaussNLL_loss"] = nn.GaussianNLLLoss()(actions, a_target,self.var)
+                action_losses.append(self.algo_config.loss.gaussNLL_weight * losses["gaussNLL_loss"])
+        except:
+            pass
+        try:
+            if self.algo_config.loss.huber_weight>0:
+                losses["huber_loss"] = nn.HuberLoss()(actions, a_target)
+                action_losses.append(self.algo_config.loss.huber_weight * losses["huber_loss"])
+        except:
+            pass
+        ####################################################
+
         action_loss = sum(action_losses)
         losses["action_loss"] = action_loss
         return losses
